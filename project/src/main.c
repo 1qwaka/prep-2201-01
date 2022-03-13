@@ -36,11 +36,11 @@ int main(int argc, const char** argv) {
         case TST_FOO_FIX: {
             int to = atoi(data);
             size_t ticks_count = timer_from(to);
-            printf("%d\n", ticks_count);
+            printf("%zu\n", ticks_count);
             break;
         }
         case TST_FOO_IMPL: {
-            if (argc = 4) {
+            if (argc == 4) {
                 // int base = atoi(data);
                 // int pow =  atoi(argv[3]);
                 // int res = custom_pow(base, pow);    // TODO: Implement me
