@@ -36,19 +36,21 @@ int main(int argc, const char** argv) {
         case TST_FOO_FIX: {
             int to = atoi(data);
             size_t ticks_count = timer_from(to);
-            printf("%zu\n", ticks_count);
+            if (ticks_count != 0)
+                printf("\n%zu", ticks_count + 1);
             break;
         }
         case TST_FOO_IMPL: {
             if (argc == 4) {
-                // int base = atoi(data);
-                // int pow =  atoi(argv[3]);
-                // int res = custom_pow(base, pow);    // TODO: Implement me
+                int base = atoi(data);
+                int pow =  atoi(argv[3]);
+                int res = custom_pow(base, pow);
 
-                // printf("%i\n", res);
+                printf("%i\n", res);
             } else {
                 return ERR_ARGS_COUNT;
             }
+            break;
         }
         case TST_MOD_IMPL: {
             // int num = atoi(data);
@@ -56,9 +58,12 @@ int main(int argc, const char** argv) {
             // TODO(Andrey): Print to stdout `1` if `num` is prime number and `0` otherwise
             // This function MUST be implemented in
             // a separate C-module (not in `main` or `utils` module)
+            break;
         }
         default: {
             return ERR_WRONG_FLG;
         }
     }
+
+    return 0;
 }
