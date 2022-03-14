@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "nums.h"
+#include "print_rec.h"
 
 #define ERR_ARGS_COUNT (-1)
 #define ERR_WRONG_FLG (-2)
@@ -7,6 +8,7 @@
 #define TST_FOO_FIX     1
 #define TST_FOO_IMPL    2
 #define TST_MOD_IMPL    3
+#define TST_NEZNAU_CHTO_NAPISAT 4
 
 
 /* NOTE(stitaevskiy):
@@ -59,6 +61,13 @@ int main(int argc, const char** argv) {
             int res = is_prime(num);
 
             printf("%d", res);
+
+            break;
+        }
+        case TST_NEZNAU_CHTO_NAPISAT: {
+            int num = atoi(data);
+
+            print_recursive(num);
 
             break;
         }
