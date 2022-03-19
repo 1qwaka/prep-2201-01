@@ -2,8 +2,6 @@
 #define PROJECT_INCLUDE_UTILS_H_
 
 #include <stddef.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 size_t timer_from(int from);
 

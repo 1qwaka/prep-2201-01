@@ -1,9 +1,12 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include "utils.h"
 #include "nums.h"
 #include "print_rec.h"
 
 #define ERR_ARGS_COUNT (-1)
 #define ERR_WRONG_FLG (-2)
+#define ERR_NOT_A_NUMBER (-3)
 
 #define TST_FOO_FIX     1
 #define TST_FOO_IMPL    2
@@ -11,33 +14,26 @@
 #define TST_PRINT_RECURSIVE 4
 
 
-/* NOTE(stitaevskiy):
- * We use `atoi` function just for simplification and code reducing.
- * This function doesn't report conversation errors.
- * For safety program we recommend using `strtol` and its analogs.
- * (See `man atoi` and `man strtol` for more info).
- *
- * const char str_num[] = "1234";
- * char* end = NULL;
- * int val = (int) strtol(str_num, &end, 0);
- * if (end != '\0') {
- *     //ERROR
- * }
- *
- * */
-
 int main(int argc, const char** argv) {
     if (argc < 3) {
         return ERR_ARGS_COUNT;
     }
+    char* end = NULL;
 
-    int Test_case = atoi(argv[1]);
+    int Test_case = (int) strtol(argv[1], &end, 0);
+    if (*end != '\0') {
+        return ERR_NOT_A_NUMBER;
+    }
+
     const char* data;
     data = argv[2];
 
     switch (Test_case) {
         case TST_FOO_FIX: {
-            int to = atoi(data);
+            int to = (int) strtol(data, &end, 0);
+            if (*end != '\0') {
+                return ERR_NOT_A_NUMBER;
+            }
             size_t ticks_count = timer_from(to);
             if (ticks_count != 0) {
                 printf("\n%zu", ticks_count + 1);
@@ -46,8 +42,15 @@ int main(int argc, const char** argv) {
         }
         case TST_FOO_IMPL: {
             if (argc == 4) {
-                int base = atoi(data);
-                int pow =  atoi(argv[3]);
+                int base = (int) strtol(data, &end, 0);
+                if (*end != '\0') {
+                    return ERR_NOT_A_NUMBER;
+                }
+                int pow = (int) strtol(argv[3], &end, 0);
+                if (*end != '\0') {
+                    return ERR_NOT_A_NUMBER;
+                }
+
                 int res = custom_pow(base, pow);
 
                 printf("%i\n", res);
@@ -57,7 +60,10 @@ int main(int argc, const char** argv) {
             break;
         }
         case TST_MOD_IMPL: {
-            int num = atoi(data);
+           int num = (int) strtol(data, &end, 0);
+            if (*end != '\0') {
+                return ERR_NOT_A_NUMBER;
+            }
 
             int res = is_prime(num);
 
@@ -66,7 +72,10 @@ int main(int argc, const char** argv) {
             break;
         }
         case TST_PRINT_RECURSIVE: {
-            int num = atoi(data);
+            int num = (int) strtol(data, &end, 0);
+            if (*end != '\0') {
+                return ERR_NOT_A_NUMBER;
+            }
 
             print_recursive(num);
 

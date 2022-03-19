@@ -1,4 +1,3 @@
-#include "utils.h"
 #include "nums.h"
 
 int is_prime(int n) {
