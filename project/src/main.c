@@ -39,8 +39,9 @@ int main(int argc, const char** argv) {
         case TST_FOO_FIX: {
             int to = atoi(data);
             size_t ticks_count = timer_from(to);
-            if (ticks_count != 0)
+            if (ticks_count != 0) {
                 printf("\n%zu", ticks_count + 1);
+            }
             break;
         }
         case TST_FOO_IMPL: {

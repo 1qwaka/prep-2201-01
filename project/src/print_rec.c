@@ -3,7 +3,7 @@
 
 void print_recursive(int n) {
     if (n == 1) {
-        printf("1");
+        putchar('1');
         return;
     }
 
