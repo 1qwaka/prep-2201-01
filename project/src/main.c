@@ -8,7 +8,7 @@
 #define TST_FOO_FIX     1
 #define TST_FOO_IMPL    2
 #define TST_MOD_IMPL    3
-#define TST_NEZNAU_CHTO_NAPISAT 4
+#define TST_PRINT_RECURSIVE 4
 
 
 /* NOTE(stitaevskiy):
@@ -64,7 +64,7 @@ int main(int argc, const char** argv) {
 
             break;
         }
-        case TST_NEZNAU_CHTO_NAPISAT: {
+        case TST_PRINT_RECURSIVE: {
             int num = atoi(data);
 
             print_recursive(num);
