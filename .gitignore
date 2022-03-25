@@ -75,3 +75,5 @@ local*
 .DS_Store
 venv
 *.log
+
+test.c
