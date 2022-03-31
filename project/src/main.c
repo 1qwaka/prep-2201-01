@@ -3,27 +3,9 @@
 #include <malloc.h>
 #include "utils.h"
 #include "prompts.h"
+#include "types.h"
 
 #define RECORD_FILENAME "record.dat"
-
-
-typedef enum {
-    NAME_SIZE = 20,
-    SURNAME_SIZE = 20,
-    ADRESS_SIZE = 30,
-    TEL_NUMBER_SIZE = 15
-} arr_sizes_t;
-
-typedef struct {
-    int      number;
-    char     name[NAME_SIZE];
-    char     surname[SURNAME_SIZE];
-    char     address[ADRESS_SIZE];
-    char     tel_number[TEL_NUMBER_SIZE];
-    double   indebtedness;
-    double   credit_limit;
-    double   cash_payments;
-} data_t;
 
 void write_data(FILE *ofPTR, data_t Client);
 
@@ -37,7 +19,7 @@ void enter_data_transaction();
 
 void update_base();
 
-
+void process_choice(int choice);
 
 int main(void) {
     int choice = 0;
@@ -49,13 +31,14 @@ int main(void) {
     choice_input_prompt();
 
     while (scanf("%d", &choice) == 1) {
+
         switch (choice) {
             case 1: {
                 Ptr = fopen("record.dat", "r+");
                 if (Ptr == NULL) {
                     puts("Not access");
                 } else {
-                    write_data(Ptr, client_data);
+                    enter_client_data(Ptr, client_data);
                     fclose(Ptr);
                 }
                 break;
@@ -93,46 +76,144 @@ int main(void) {
                 break;
             }
         }
-
+        
         choice_input_prompt();
     }
     return 0;
 }
 
+// void process_choice(int choice) {
+//             switch (choice) {
+//             case 1: {
+//                 Ptr = fopen("record.dat", "r+");
+//                 if (Ptr == NULL) {
+//                     puts("Not access");
+//                 } else {
+//                     write_data(Ptr, client_data);
+//                     fclose(Ptr);
+//                 }
+//                 break;
+//             }
 
-void write_data(FILE *ofPTR, data_t Client) {
+//             case 2: {
+//                 Ptr = fopen(filename, "r+");
+//                 if (Ptr == NULL) {
+//                     puts("Not acess");
+//                 } else {
+//                     write_transaction(Ptr, transfer);
+//                     fclose(Ptr);
+//                 }
+//                 break;
+//             }
+
+//             case 3: {
+//                 Ptr = fopen("record.dat", "r");
+//                 Ptr_2 = fopen("transaction.dat", "r");
+//                 blackrecord = fopen("blackrecord.dat", "w");
+
+//                 if (Ptr == NULL || Ptr_2 == NULL || blackrecord == NULL) {
+//                     puts("exit");
+//                 } else {
+//                     black_record(Ptr, Ptr_2, blackrecord, client_data, transfer);
+//                     fclose(Ptr);
+//                     fclose(Ptr_2);
+//                     fclose(blackrecord);
+//                 }
+//                 break;
+//             }
+
+//             default: {
+//                 puts("error");
+//                 break;
+//             }
+//         }
+// }
+
+void write_client_data(FILE *data_file, data_t client) {
+    char format[100] = { 0 };
+    snprintf(format,
+             sizeof(format),
+             "%%-%dd%%-%ds%%-%ds%%-%ds%%%ds%%%d.2f%%%d.2f%%%d.2f\n",
+             NUMBER_WRITE_W,
+             NAME_WRITE_W,
+             SURNAME_WRITE_W,
+             ADRESS_WRITE_W,
+             TEL_NUMBER_WRITE_W,
+             INDEBTEDNESS_WRITE_W,
+             CREDIT_LIMIT_WRITE_W,
+             CASH_PAYMENTS_WRITE_W);
+    
+    fprintf(data_file, 
+            format,
+            client.number,
+            client.name, 
+            client.surname,
+            client.address, 
+            client.tel_number, 
+            client.indebtedness, 
+            client.credit_limit, 
+            client.cash_payments);
+}
+
+void enter_client_data(FILE *data_file, data_t client) {
     client_data_input_prompt();
-    while (scanf("%d%s%s%s%s%lf%lf%lf", &Client.number, Client.name, Client.surname, Client.address, Client.tel_number,
-                 &Client.indebtedness, &Client.credit_limit, &Client.cash_payments) == 8) {
-        fprintf(ofPTR, "%-12d%-11s%-11s%-16s%20s%12.2f%12.2f%12.2f\n", Client.number, Client.name, Client.surname,
-                Client.address, Client.tel_number, Client.indebtedness, Client.credit_limit, Client.cash_payments);
+    // char format[60];
+
+    while (scanf("%d%s%s%s%s%lf%lf%lf",
+                &client.number,
+                client.name,
+                client.surname,
+                client.address,
+                client.tel_number,
+                &client.indebtedness,
+                &client.credit_limit, 
+                &client.cash_payments) == 8) {
+        write_client_data(data_file, client);
         client_data_input_prompt();
     }
 }
 
+void write_transaction(FILE *transaction_file, data_t transfer) {
+    char format[30] = { 0 };
+    snprintf(format,
+            sizeof(format),
+            "%%-%dd%%-%d.2f\n",
+            TRS_NUMBER_WRITE_W,
+            TRS_CASH_PAYMENTS_W);
+    fprintf(transaction_file,
+            format,
+            transfer.number, 
+            transfer.cash_payments);
+}
 
-void write_transaction(FILE *ofPTR, data_t transfer) {
+void enter_transaction(FILE *transaction_file, data_t transfer) {
     transaction_input_prompt();
-    while (scanf("%d %lf", &transfer.number, &transfer.cash_payments) == 2) {
-        fprintf(ofPTR, "%-3d%-6.2f\n", transfer.number, transfer.cash_payments);
+    while (scanf("%d %lf", 
+            &transfer.number, 
+            &transfer.cash_payments) == 2) {
+        write_transaction(transaction_file, transfer);
         transaction_input_prompt();
     }
 }
 
 void black_record(FILE *ofPTR, FILE *ofPTR_2, FILE *blackrecord, data_t client_data, data_t transfer) {
-
-    while (fscanf(ofPTR, "%d%s%s%s%s%lf%lf%lf", &client_data.number, client_data.name, client_data.surname,
-                  client_data.address, client_data.tel_number, &client_data.indebtedness, &client_data.credit_limit,
-                  &client_data.cash_payments) != -1) {
+    while (fscanf(ofPTR, 
+                  "%d%s%s%s%s%lf%lf%lf", 
+                  &client_data.number, 
+                  client_data.name, 
+                  client_data.surname,
+                  client_data.address, 
+                  client_data.tel_number,
+                  &client_data.indebtedness, 
+                  &client_data.credit_limit,
+                  &client_data.cash_payments) != 8) {
 
         while (fscanf(ofPTR_2, "%d %lf", &transfer.number, &transfer.cash_payments) != -1) {
             if (client_data.number == transfer.number && transfer.cash_payments != 0) {
                 client_data.credit_limit += transfer.cash_payments;
             }
         }
-        fprintf(blackrecord, "%-12d%-11s%-11s%-16s%20s%12.2f%12.2f%12.2f\n", client_data.number, client_data.name,
-                client_data.surname, client_data.address, client_data.tel_number, client_data.indebtedness,
-                client_data.credit_limit, client_data.cash_payments);
+        write_client_data(blackrecord, client_data);
         rewind(ofPTR_2);
         
     }

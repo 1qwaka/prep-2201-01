@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include "prompts.h"
+
 
 void choice_input_prompt() {
     printf("%s", "please enter action\n"
