@@ -2,8 +2,10 @@
 #include <stddef.h>
 #include <malloc.h>
 #include "utils.h"
+#include "prompts.h"
 
 #define RECORD_FILENAME "record.dat"
+
 
 typedef enum {
     NAME_SIZE = 20,
@@ -35,6 +37,8 @@ void enter_data_transaction();
 
 void update_base();
 
+
+
 int main(void) {
     int choice = 0;
 
@@ -42,10 +46,7 @@ int main(void) {
     FILE *Ptr = NULL, *Ptr_2, *blackrecord;
     data_t client_data, transfer;
 
-    printf("%s", "please enter action\n"
-                 "1 enter data client:\n"
-                 "2 enter data transaction:\n"
-                 "3 update base\n");
+    choice_input_prompt();
 
     while (scanf("%d", &choice) == 1) {
         switch (choice) {
@@ -93,46 +94,28 @@ int main(void) {
             }
         }
 
-        printf("%s", "please enter action\n1 enter data client:\n2 enter data transaction:\n3 update base\n");
+        choice_input_prompt();
     }
     return 0;
 }
 
+
 void write_data(FILE *ofPTR, data_t Client) {
-    printf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n",
-           "1 number account: ",
-           "2 Client name: ",
-           "3 surname: ",
-           "4 Addres client: ",
-           "5 Client Telnum: ",
-           "6 Client indebtedness: ",
-           "7 Client credit limit: ",
-           "8 Client cash payments: ");
+    client_data_input_prompt();
     while (scanf("%d%s%s%s%s%lf%lf%lf", &Client.number, Client.name, Client.surname, Client.address, Client.tel_number,
-                 &Client.indebtedness, &Client.credit_limit, &Client.cash_payments) != -1) {
+                 &Client.indebtedness, &Client.credit_limit, &Client.cash_payments) == 8) {
         fprintf(ofPTR, "%-12d%-11s%-11s%-16s%20s%12.2f%12.2f%12.2f\n", Client.number, Client.name, Client.surname,
                 Client.address, Client.tel_number, Client.indebtedness, Client.credit_limit, Client.cash_payments);
-        printf("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n\n",
-               "1 number account: ",
-               "2 Client name: ",
-               "3 surname: ",
-               "4 Addres client: ",
-               "5 Client Telnum: ",
-               "6 Client indebtedness: ",
-               "7 Client credit limit: ",
-               "9 Client cash payments:");
+        client_data_input_prompt();
     }
 }
 
+
 void write_transaction(FILE *ofPTR, data_t transfer) {
-    printf("%s\n%s\n",
-           "1 number account: ",
-           "2 Client cash payments: ");
-    while (scanf("%d %lf", &transfer.number, &transfer.cash_payments) != -1) {
+    transaction_input_prompt();
+    while (scanf("%d %lf", &transfer.number, &transfer.cash_payments) == 2) {
         fprintf(ofPTR, "%-3d%-6.2f\n", transfer.number, transfer.cash_payments);
-        printf("%s\n%s\n",
-               "1 number account:",
-               "2 Client cash payments: ");
+        transaction_input_prompt();
     }
 }
 
