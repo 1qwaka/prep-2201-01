@@ -1,138 +1,92 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <malloc.h>
-#include "utils.h"
 #include "prompts.h"
 #include "types.h"
 #include "enters.h"
 #include "scans.h"
 #include "writes.h"
 
-#define RECORD_FILENAME "record.dat"
+#define CLIENTS_DATA_FILENAME "record.dat"
+#define TRANSACTIONS_FILENAME "transaction.dat"
+#define DATABASE_FILENAME "blackrecord.dat"
 
-void black_record(FILE *data_file, FILE *transaction_file,
-                  FILE *blackrecord, data_t client_data, data_t transfer);
 
 void process_choice(int choice);
+
+void black_record(FILE *client_data_file, FILE *transaction_file,
+                  FILE *database_file, data_t client, data_t transaction);
+
 
 int main(void) {
     int choice = 0;
 
-    // clients data, transactions, backup
-    FILE *Ptr = NULL, *Ptr_2, *blackrecord;
-    data_t client_data = { 0 }, transfer = { 0 };
-
     choice_input_prompt();
 
     while (scanf("%d", &choice) == 1) {
-        switch (choice) {
-            case 1: {
-                Ptr = fopen("record.dat", "r+");
-                if (Ptr == NULL) {
-                    puts("Not access");
-                } else {
-                    enter_client_data(Ptr, client_data);
-                    fclose(Ptr);
-                }
-                break;
-            }
-
-            case 2: {
-                Ptr = fopen(filename, "r+");
-                if (Ptr == NULL) {
-                    puts("Not acess");
-                } else {
-                    enter_transaction(Ptr, transfer);
-                    fclose(Ptr);
-                }
-                break;
-            }
-
-            case 3: {
-                Ptr = fopen("record.dat", "r");
-                Ptr_2 = fopen("transaction.dat", "r");
-                blackrecord = fopen("blackrecord.dat", "w");
-
-                if (Ptr == NULL || Ptr_2 == NULL || blackrecord == NULL) {
-                    puts("exit");
-                } else {
-                    black_record(Ptr, Ptr_2, blackrecord, client_data, transfer);
-                    fclose(Ptr);
-                    fclose(Ptr_2);
-                    fclose(blackrecord);
-                }
-                break;
-            }
-
-            default: {
-                puts("error");
-                break;
-            }
-        }
-
+        process_choice(choice);
         choice_input_prompt();
     }
     return 0;
 }
 
-// void process_choice(int choice) {
-//             switch (choice) {
-//             case 1: {
-//                 Ptr = fopen("record.dat", "r+");
-//                 if (Ptr == NULL) {
-//                     puts("Not access");
-//                 } else {
-//                     write_data(Ptr, client_data);
-//                     fclose(Ptr);
-//                 }
-//                 break;
-//             }
+void process_choice(int choice) {
+    FILE *client_data_file = NULL, *transactions_file = NULL, *database_file = NULL;
+    data_t client_data = { 0 }, transaction = { 0 };
 
-//             case 2: {
-//                 Ptr = fopen(filename, "r+");
-//                 if (Ptr == NULL) {
-//                     puts("Not acess");
-//                 } else {
-//                     write_transaction(Ptr, transfer);
-//                     fclose(Ptr);
-//                 }
-//                 break;
-//             }
-
-//             case 3: {
-//                 Ptr = fopen("record.dat", "r");
-//                 Ptr_2 = fopen("transaction.dat", "r");
-//                 blackrecord = fopen("blackrecord.dat", "w");
-
-//                 if (Ptr == NULL || Ptr_2 == NULL || blackrecord == NULL) {
-//                     puts("exit");
-//                 } else {
-//                     black_record(Ptr, Ptr_2, blackrecord, client_data, transfer);
-//                     fclose(Ptr);
-//                     fclose(Ptr_2);
-//                     fclose(blackrecord);
-//                 }
-//                 break;
-//             }
-
-//             default: {
-//                 puts("error");
-//                 break;
-//             }
-//         }
-// }
-
+    switch (choice) {
+        case 1: {
+            client_data_file = fopen(CLIENTS_DATA_FILENAME, "r+");
+            if (client_data_file == NULL) {
+                puts("Not access");
+            } else {
+                enter_client_data(client_data_file, client_data);
+                fclose(client_data_file);
+            }
+            break;
+        }
+        case 2: {
+            client_data_file = fopen(TRANSACTIONS_FILENAME, "r+");
+            if (client_data_file == NULL) {
+                puts("Not acess");
+            } else {
+                enter_transaction(client_data_file, transaction);
+                fclose(client_data_file);
+            }
+            break;
+        }
+        case 3: {
+            client_data_file = fopen(CLIENTS_DATA_FILENAME, "r");
+            transactions_file = fopen(TRANSACTIONS_FILENAME, "r");
+            database_file = fopen(DATABASE_FILENAME, "w");
+            if (client_data_file == NULL || transactions_file == NULL || database_file == NULL) {
+                puts("exit");
+            } else {
+                black_record(client_data_file, transactions_file, database_file, client_data, transaction);
+                fclose(client_data_file);
+                fclose(transactions_file);
+                fclose(database_file);
+            }
+            break;
+        }
+        default: {
+            puts("error");
+            break;
+        }
+    }
+}
 
 
-void black_record(FILE *data_file, FILE *transaction_file,
-                  FILE *blackrecord, data_t client_data, data_t transfer) {
-    while (fscan_client_data(data_file, &client_data)) {
-        while (fscan_transaction(transaction_file, &transfer)) {
-            if (client_data.number == transfer.number && transfer.cash_payments != 0) {
-                client_data.credit_limit += transfer.cash_payments;
+
+void black_record(FILE *client_data_file, FILE *transaction_file,
+                  FILE *database_file, data_t client, data_t transaction) {
+    while (fscan_client_data(client_data_file, &client)) {
+        while (fscan_transaction(transaction_file, &transaction)) {
+            if (client.number == transaction.number && transaction.cash_payments != 0) {
+                client.credit_limit += transaction.cash_payments;
             }
         }
-        write_client_data(blackrecord, client_data);
+        write_client_data(database_file, client);
         rewind(transaction_file);
     }
 }

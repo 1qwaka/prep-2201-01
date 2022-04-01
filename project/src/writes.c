@@ -4,11 +4,11 @@
 #include "formats.h"
 #include "writes.h"
 
-void write_client_data(FILE *data_file, data_t client) {
+void write_client_data(FILE *client_data_file, data_t client) {
     char format[FORMAT_STRING_SIZE] = { 0 };
     write_client_data_format(format);
 
-    fprintf(data_file,
+    fprintf(client_data_file,
             format,
             client.number,
             client.name,
@@ -18,6 +18,7 @@ void write_client_data(FILE *data_file, data_t client) {
             client.indebtedness,
             client.credit_limit,
             client.cash_payments);
+    printf("\nCLIENT DATA WROTE\n");
 }
 
 void write_transaction(FILE *transaction_file, data_t transaction) {

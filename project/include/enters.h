@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include "types.h"
 
-void enter_client_data(FILE *data_file, data_t client);
+void enter_client_data(FILE *client_data_file, data_t client);
 
-void enter_transaction(FILE *transaction_file, data_t transfer);
+void enter_transaction(FILE *transaction_file, data_t transaction);
 
 #endif  // PROJECT_INCLUDE_ENTERS_H_
