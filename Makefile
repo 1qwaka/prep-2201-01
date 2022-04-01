@@ -6,7 +6,8 @@ SRCS = project/src/main.c \
        project/src/enters.c \
        project/src/formats.c \
        project/src/scans.c \
-       project/src/writes.c
+       project/src/writes.c \
+       project/src/test.c
 
 
 .PHONY: all build rebuild check test memtest clean

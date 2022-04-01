@@ -18,7 +18,6 @@ void write_client_data(FILE *client_data_file, data_t client) {
             client.indebtedness,
             client.credit_limit,
             client.cash_payments);
-    printf("\nCLIENT DATA WROTE\n");
 }
 
 void write_transaction(FILE *transaction_file, data_t transaction) {

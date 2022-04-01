@@ -15,7 +15,6 @@ int scan_client_data(data_t *client) {
                    &client->indebtedness,
                    &client->credit_limit,
                    &client->cash_payments);
-    printf("rc IS %d\n", rc);
     return rc == 8;
 }
 

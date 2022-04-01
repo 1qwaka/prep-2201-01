@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stddef.h>
-#include <malloc.h>
 #include "prompts.h"
 #include "types.h"
 #include "enters.h"
 #include "scans.h"
 #include "writes.h"
+#include "test.h"
 
 #define CLIENTS_DATA_FILENAME "record.dat"
 #define TRANSACTIONS_FILENAME "transaction.dat"
@@ -14,11 +14,13 @@
 
 void process_choice(int choice);
 
-void black_record(FILE *client_data_file, FILE *transaction_file,
+void update_database(FILE *client_data_file, FILE *transaction_file,
                   FILE *database_file, data_t client, data_t transaction);
 
 
 int main(void) {
+    test_write_to_file();
+
     int choice = 0;
 
     choice_input_prompt();
@@ -31,8 +33,12 @@ int main(void) {
 }
 
 void process_choice(int choice) {
-    FILE *client_data_file = NULL, *transactions_file = NULL, *database_file = NULL;
-    data_t client_data = { 0 }, transaction = { 0 };
+    FILE *client_data_file = NULL;
+    FILE *transactions_file = NULL;
+    FILE *database_file = NULL;
+
+    data_t client_data = { 0 };
+    data_t transaction = { 0 };
 
     switch (choice) {
         case 1: {
@@ -46,23 +52,27 @@ void process_choice(int choice) {
             break;
         }
         case 2: {
-            client_data_file = fopen(TRANSACTIONS_FILENAME, "r+");
-            if (client_data_file == NULL) {
+            transactions_file = fopen(TRANSACTIONS_FILENAME, "r+");
+            if (transactions_file == NULL) {
                 puts("Not acess");
             } else {
-                enter_transaction(client_data_file, transaction);
-                fclose(client_data_file);
+                enter_transaction(transactions_file, transaction);
+                fclose(transactions_file);
             }
             break;
         }
         case 3: {
-            client_data_file = fopen(CLIENTS_DATA_FILENAME, "r");
-            transactions_file = fopen(TRANSACTIONS_FILENAME, "r");
-            database_file = fopen(DATABASE_FILENAME, "w");
-            if (client_data_file == NULL || transactions_file == NULL || database_file == NULL) {
+            if ((client_data_file = fopen(CLIENTS_DATA_FILENAME, "r")) == NULL) {
                 puts("exit");
+            } else if ((transactions_file = fopen(TRANSACTIONS_FILENAME, "r")) == NULL) {
+                puts("exit");
+                fclose(client_data_file);
+            } else if ((database_file = fopen(DATABASE_FILENAME, "w")) == NULL) {
+                puts("exit");
+                fclose(client_data_file);
+                fclose(transactions_file);
             } else {
-                black_record(client_data_file, transactions_file, database_file, client_data, transaction);
+                update_database(client_data_file, transactions_file, database_file, client_data, transaction);
                 fclose(client_data_file);
                 fclose(transactions_file);
                 fclose(database_file);
@@ -78,7 +88,7 @@ void process_choice(int choice) {
 
 
 
-void black_record(FILE *client_data_file, FILE *transaction_file,
+void update_database(FILE *client_data_file, FILE *transaction_file,
                   FILE *database_file, data_t client, data_t transaction) {
     while (fscan_client_data(client_data_file, &client)) {
         while (fscan_transaction(transaction_file, &transaction)) {
