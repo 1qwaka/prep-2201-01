@@ -35,4 +35,4 @@ typedef struct {
     double   cash_payments;
 } data_t;
 
-#endif
+#endif  // PROJECT_INCLUDE_TYPES_H_
