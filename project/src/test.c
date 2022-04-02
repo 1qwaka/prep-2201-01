@@ -51,4 +51,5 @@ void test_write_to_file() {
     } else {
         printf("TEST FAILED (CAN NOT READ DATA FROM FILE)\n");
     }
+    fclose(file);
 }

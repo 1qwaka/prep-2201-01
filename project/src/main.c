@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stddef.h>
+#include <malloc.h>
 #include "prompts.h"
 #include "types.h"
 #include "enters.h"
@@ -85,8 +86,6 @@ void process_choice(int choice) {
         }
     }
 }
-
-
 
 void update_database(FILE *client_data_file, FILE *transaction_file,
                   FILE *database_file, data_t client, data_t transaction) {
