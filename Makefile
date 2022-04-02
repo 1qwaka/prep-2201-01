@@ -15,7 +15,7 @@ SRCS = project/src/main.c \
 all: clean check test memtest
 
 $(TARGET): $(SRCS)
-	$(CC) -Wpedantic -Wall -Wextra -Werror -I $(HDRS_DIR) -o $(TARGET) $(CFLAGS) $(SRCS)
+	$(CC) -Wpedantic -Wall -Wextra -Werror -g -fsanitize=address -I $(HDRS_DIR) -o $(TARGET) $(CFLAGS) $(SRCS) -static-libasan
 
 build: $(TARGET)
 
