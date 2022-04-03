@@ -7,6 +7,9 @@
 
 
 void enter_client_data(FILE *client_data_file, data_t client) {
+    if (client_data_file == NULL)
+        return;
+
     client_data_input_prompt();
 
     while (scan_client_data(&client)) {
@@ -16,6 +19,9 @@ void enter_client_data(FILE *client_data_file, data_t client) {
 }
 
 void enter_transaction(FILE *transaction_file, data_t transaction) {
+    if (transaction_file == NULL)
+        return;
+
     transaction_input_prompt();
     while (scan_transaction(&transaction)) {
         write_transaction(transaction_file, transaction);

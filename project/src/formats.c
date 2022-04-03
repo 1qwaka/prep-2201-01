@@ -4,6 +4,9 @@
 
 
 void scan_client_data_format(char *format_str) {
+    if (format_str == NULL)
+        return;
+
     snprintf(format_str,
              FORMAT_STRING_SIZE,
              "%%%dd%%%ds%%%ds%%%ds%%%ds%%%dlf%%%dlf%%%dlf",
@@ -18,6 +21,9 @@ void scan_client_data_format(char *format_str) {
 }
 
 void write_client_data_format(char *format_str) {
+    if (format_str == NULL)
+            return;
+
     snprintf(format_str,
              FORMAT_STRING_SIZE,
              "%%-%dd%%-%ds%%-%ds%%-%ds%%%ds%%%d.2f%%%d.2f%%%d.2f\n",
@@ -32,6 +38,9 @@ void write_client_data_format(char *format_str) {
 }
 
 void write_transaction_format(char *format_str) {
+    if (format_str == NULL)
+        return;
+
     snprintf(format_str,
              FORMAT_STRING_SIZE,
              "%%-%dd%%-%d.2f\n",

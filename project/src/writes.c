@@ -5,6 +5,9 @@
 #include "writes.h"
 
 void write_client_data(FILE *client_data_file, data_t client) {
+    if (client_data_file == NULL)
+        return;
+
     char format[FORMAT_STRING_SIZE] = { 0 };
     write_client_data_format(format);
 
@@ -21,6 +24,9 @@ void write_client_data(FILE *client_data_file, data_t client) {
 }
 
 void write_transaction(FILE *transaction_file, data_t transaction) {
+    if (transaction_file == NULL)
+        return;
+
     char format[FORMAT_STRING_SIZE] = { 0 };
     write_transaction_format(format);
     fprintf(transaction_file,

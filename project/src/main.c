@@ -89,6 +89,9 @@ void process_choice(int choice) {
 
 void update_database(FILE *client_data_file, FILE *transaction_file,
                   FILE *database_file, data_t client, data_t transaction) {
+    if (client_data_file == NULL || transaction_file == NULL || database_file == NULL)
+        return;
+
     while (fscan_client_data(client_data_file, &client)) {
         while (fscan_transaction(transaction_file, &transaction)) {
             if (client.number == transaction.number && transaction.cash_payments != 0) {
