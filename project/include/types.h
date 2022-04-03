@@ -15,13 +15,17 @@ typedef enum {
     ADRESS_WRITE_W = 16,
     TEL_NUMBER_WRITE_W = 20,
     INDEBTEDNESS_WRITE_W = 12,
+    INDEBTEDNESS_PRECISION_WRITE_W = 2,
     CREDIT_LIMIT_WRITE_W = 12,
-    CASH_PAYMENTS_WRITE_W = 12
+    CREDIT_LIMIT_PRECISION_WRITE_W = 2,
+    CASH_PAYMENTS_WRITE_W = 12,
+    CASH_PAYMENTS_PRECISION_WRITE_W = 2
 } client_data_write_width_t;
 
 typedef enum {
     TRS_NUMBER_WRITE_W = 3,
-    TRS_CASH_PAYMENTS_W = 6,
+    TRS_CASH_PAYMENTS_WRITE_W = 6,
+    TRS_CASH_PAYMENTS_PRECISION_WRITE_W = 2
 } transaction_write_width_t;
 
 typedef struct {
