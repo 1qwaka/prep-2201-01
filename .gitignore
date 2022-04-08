@@ -76,3 +76,5 @@ local*
 venv
 *.log
 *-debug
+
+test.c
