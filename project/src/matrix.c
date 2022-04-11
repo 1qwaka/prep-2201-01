@@ -150,7 +150,8 @@ Matrix* mul_scalar(const Matrix* matrix, double val) {
         if (ret_matrix != NULL) {
             for (size_t i = 0; i < matrix->rows; ++i) {
                 for (size_t j = 0; j < matrix->cols; ++j) {
-                    matrix->table[i * matrix->cols + j] = matrix->table[i * matrix->cols + j] * val;
+                    ret_matrix->table[i * matrix->cols + j] = matrix->table[i * matrix->cols + j] * val;
+                    // printf("%lf\n", matrix->table[i * matrix->cols + j]);
                 }
             }
         }
@@ -168,7 +169,7 @@ Matrix* transp(const Matrix* matrix) {
         if (ret_matrix != NULL) {
             for (size_t i = 0; i < matrix->rows; ++i) {
                 for (size_t j = 0; j < matrix->cols; ++j) {
-                    ret_matrix->table[i * ret_matrix->cols + j] = matrix->table[i * matrix->cols + j];
+                    ret_matrix->table[j * ret_matrix->cols + i] = matrix->table[i * matrix->cols + j];
                 }
             }
         }
@@ -233,10 +234,14 @@ Matrix* mul(const Matrix* l, const Matrix* r) {
             for (size_t j = 0; j < ret_matrix->cols; ++j) {
                 ret_matrix->table[i * ret_matrix->cols + j] = 0;
 
-                for (size_t k = 0; k < l->rows; ++k) {
+                // printf("=== MUL MAT ELEM i=%zu j=%zu ===\n", i, j);
+                for (size_t k = 0; k < l->cols; ++k) {
+                    // printf("left  == %zu %zu == %lf\n", i, k, l->table[i * l->cols + k]);
+                    // printf("right == %zu %zu == %lf\n", k, j, r->table[k * r->cols + j]);
+
                     ret_matrix->table[i * ret_matrix->cols + j] +=
                         l->table[i * l->cols + k] *
-                        r->table[k * r->cols + i];
+                        r->table[k * r->cols + j];
                 }
             }
         }
@@ -256,7 +261,10 @@ static Matrix* get_minor(const Matrix* matrix, size_t row, size_t col) {
                 flag_j = 0;
                 for (size_t j = 0; j < matrix->cols; ++j) {
                     if (j != col) {
-                        minor[(i - flag_i) * minor->cols + j - flag_j] = matrix[i * matrix->cols + j];
+                        // printf("minor [%zu]x[%zu],  i=%zu j=%zu\n",
+                        //     minor->rows, minor->cols, i - flag_i, j - flag_j);
+                        minor->table[(i - flag_i) * minor->cols + j - flag_j] =
+                            matrix->table[i * matrix->cols + j];
                     } else {
                         flag_j = 1;
                     }
@@ -273,7 +281,14 @@ static Matrix* get_minor(const Matrix* matrix, size_t row, size_t col) {
 int det(const Matrix* matrix, double* val) {
     int rc = 0;
 
+
     if (valid_matrix(matrix) && matrix->rows == matrix->cols) {
+        // for (size_t i = 0; i < 5-matrix->rows; i++) {
+        //     printf("   ");
+        // }
+
+        // printf("/// === {%zu}x{%zu} === ///\n", matrix->rows, matrix->cols);
+
         if (matrix->rows == 2) {
             *val = matrix->table[0] * matrix->table[3] - matrix->table[1] * matrix->table[2];
 
@@ -289,11 +304,17 @@ int det(const Matrix* matrix, double* val) {
 
             for (size_t i = 0; i < matrix->cols && flag == 0; ++i) {
                 if (matrix->table[i] != 0) {
+                    // printf("creating minor.....\n");
                     minor = get_minor(matrix, 0, i);
 
                     if (minor != NULL) {
+                        // printf("can create minor!!\n");
                         flag = det(minor, &minor_det);
                         if (flag == 0) {
+                            // for (size_t g = 0; g < 5-matrix->rows; g++) {
+                            //     printf("   ");
+                            // }
+                            // printf("minor_det: %lf   val: %lf\n", minor_det, matrix->table[i]);
                             *val += sign * matrix->table[i] * minor_det;
                         }
 
@@ -302,6 +323,7 @@ int det(const Matrix* matrix, double* val) {
                         flag = 1;
                     }
                 }
+                minor_det = 0;
                 sign *= -1;
             }
 
@@ -309,10 +331,14 @@ int det(const Matrix* matrix, double* val) {
                 rc = 2;
             }
         }
+        // for (size_t i = 0; i < 5-matrix->rows; i++) {
+        //     printf("   ");
+        // }
     } else {
         rc = 1;
     }
 
+    // printf("\\\\\\ === EXIT result: %lf === \\\\\\\n", *val);
     return rc;
 }
 
@@ -342,6 +368,7 @@ Matrix* adj(const Matrix* matrix) {
                     } else {
                         flag = 1;
                     }
+                    minor_det = 0;
                 }
             }
 
@@ -364,11 +391,29 @@ Matrix* adj(const Matrix* matrix) {
     return adj_mat;
 }
 
+static void print_matrix(const Matrix *mat) {
+    if (mat == NULL) {
+        printf("==NULL MATRIX==\n");
+        return;
+    }
+    for (size_t i = 0; i < mat->rows; i++) {
+        for (size_t j = 0; j < mat->cols; j++) {
+            printf("%11.4lf", mat->table[i * mat->cols + j]);
+        }
+        printf("\n");
+    }
+}
+
 Matrix* inv(const Matrix* matrix) {
+    printf("\n==IN INV==\n");
+    print_matrix(matrix);
     Matrix *inv_matrix = NULL;
 
     if (valid_matrix(matrix)) {
         inv_matrix = adj(inv_matrix);
+
+        puts("== 1 ==");
+        print_matrix(inv_matrix);
 
         if (inv_matrix != NULL) {
             double determinant = 0;
@@ -387,5 +432,7 @@ Matrix* inv(const Matrix* matrix) {
         }
     }
 
+    printf("\n==AFTER INV==\n");
+    print_matrix(inv_matrix);
     return inv_matrix;
 }
