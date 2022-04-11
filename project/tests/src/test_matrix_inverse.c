@@ -46,7 +46,7 @@ static void _test_inverse(const char *in) {
     Matrix *matrix = create_matrix_from_file(in);
     size_t size = 0;
     get_rows(matrix, &size);
-    Matrix *expected_identity_matrix = create_ident3ity_matrix(size);
+    Matrix *expected_identity_matrix = create_identity_matrix(size);
 
     Matrix *inversed_matrix = inv(matrix);
     Matrix *identity_matrix = mul(matrix, inversed_matrix);
