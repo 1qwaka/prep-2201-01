@@ -42,12 +42,13 @@ class Matrix {
   Matrix adj() const;
   Matrix inv() const;
 
+ private:
   bool sameSize(const Matrix& rhs) const;
   Matrix pairElementProcess(const Matrix& rhs, double processor(double, double)) const;
+  void swithRows(size_t row1, size_t row2);
+  void sumRows(size_t row1, size_t row2, double multiplier);
+  Matrix getUpperTriangular() const;
   Matrix* getMinor(size_t row, size_t col) const;
-  void swith_rows(size_t row1, size_t row2);
-  void sum_rows(size_t row1, size_t row2, double multiplier);
-  Matrix get_upper_triangular() const;
 };
 
 Matrix operator*(double val, const Matrix& matrix);
