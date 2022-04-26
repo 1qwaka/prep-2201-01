@@ -2,3 +2,6 @@
 /cmake-build-*
 /.idea
 .vscode/
+
+*.exe
+test.cpp

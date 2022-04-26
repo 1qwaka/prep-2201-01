@@ -5,6 +5,11 @@
 
 namespace prep {
 class Matrix {
+ private:
+  std::vector<double> table;
+  size_t rows;
+  size_t cols;
+
  public:
   explicit Matrix(size_t rows = 0, size_t cols = 0);
   explicit Matrix(std::istream& is);
@@ -36,6 +41,14 @@ class Matrix {
   double det() const;
   Matrix adj() const;
   Matrix inv() const;
+
+ private:
+  bool sameSize(const Matrix& rhs) const;
+  Matrix pairElementProcess(const Matrix& rhs, double processor(double, double)) const;
+  void swithRows(size_t row1, size_t row2);
+  void sumRows(size_t row1, size_t row2, double multiplier);
+  Matrix getUpperTriangular() const;
+  Matrix* getMinor(size_t row, size_t col) const;
 };
 
 Matrix operator*(double val, const Matrix& matrix);
