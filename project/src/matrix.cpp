@@ -285,7 +285,7 @@ Matrix Matrix::get_upper_triangular() const {
         }
     }
 
-    // cout << upper_triangular << endl;    
+    // cout << upper_triangular << endl;
 
     return upper_triangular;
 }
