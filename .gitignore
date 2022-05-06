@@ -2,5 +2,3 @@
 *.out
 core*
 *.log
-test.cpp
-build
