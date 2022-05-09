@@ -65,16 +65,49 @@ template <typename MessageType>
 std::vector<std::byte> NetworkMessage<MessageType>::Serialize(const MessageType &message) {
     std::vector<std::byte> network_data;
     // TODO - Implement me - нужно точно рассчитать количество байт и аккуратно скопировать их в массив
+    ////
+    std::byte* p = (std::byte*)&message.type;
+    for (size_t i = 0; i < sizeof(message.type); ++i) {
+        network_data.push_back(*(p + i));
+    }
+    for (size_t i = 0; i < message.content.size(); ++i) {
+        network_data.push_back((std::byte)message.content[i]);
+    }
+    network_data.push_back((std::byte)'\0');
+    ////
     return network_data;
 }
 
 template <typename MessageType>
 std::tuple<ErrorStatus, MessageType> NetworkMessage<MessageType>::Deserialize(const std::vector<std::byte> &network_bytes) {
     // TODO - Implement me
-    return std::make_tuple(ErrorStatus::kNoError, MessageType{
+    ////
+    MessageType message{
         MessageType::Type::kUnknown,
         std::string{}
-    });
+    };
+    ErrorStatus error = ErrorStatus::kNoError;
+
+    std::byte* p = (std::byte*)&message.type;
+    size_t i = 0;
+    for (; i < sizeof(message.type); ++i) {
+        if (network_bytes.size() <= i) {
+            error = ErrorStatus::kError;
+            break;
+        }
+        *(p + i) = network_bytes[i];
+    }
+    for (; network_bytes[i] != (std::byte)'\0'; ++i) {
+        // cout << "i: " << i << " = " << (char)network_bytes[i] << endl;
+        if (network_bytes.size() <= i) {
+            error = ErrorStatus::kError;
+            break;
+        }
+        message.content.push_back((char)network_bytes[i]);
+    }
+    // cout << "i: " << i << " = " << (char)network_bytes[i] << endl;
+    ////
+    return std::make_tuple(error, message);
 }
 
 using NetworkRequest = NetworkMessage<Request>;
@@ -148,12 +181,55 @@ inline ReadStatus ReadFromNetwork(int socket_fd, std::vector<std::byte> &network
     // TODO - нужно считать данные из сокета в network_bytes
     // если данных нет - вернуть ReadStatus::kNoData (если не стоит retry_if_no_data и не вышел таймаут)
     // если произошла ошибка - вернуть ReadStatus::kFailed
-    return ReadStatus::kSucceed
+    ////
+    std::byte b;
+    ssize_t r = 0;
+    size_t i = 0;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+    while ((r = read(socket_fd, &b, 1)) > 0) {
+        network_bytes.push_back(b);
+        ++i;
+    }
+
+    if (r == EOF) {
+        return ReadStatus::kFailed;
+    }
+
+    while (i == 0 && retry_if_no_data) {
+        if (start - std::chrono::steady_clock::now() < timeout) {
+            std::this_thread::sleep_for(retry_time_interval);
+        } else {
+            break;
+        }
+
+        while ((r = read(socket_fd, &b, 1)) > 0) {
+            network_bytes.push_back(b);
+            ++i;
+        }
+
+        if (r == EOF) {
+            return ReadStatus::kFailed;
+        }
+    }
+
+    if (i == 0) {
+        return ReadStatus::kNoData;
+    }
+    ////
+    return ReadStatus::kSucceed;
 }
 
 inline ErrorStatus SendToNetwork(int socket_fd, const std::vector<std::byte> &message_data) {
     // TODO - нужно отправить массив байт через сокет
     // если произошла ошибка - вернуть
+    ////
+    ssize_t msg_size = message_data.size();
+    ssize_t wrote = write(socket_fd, message_data.data(), msg_size);
+    if (wrote != msg_size) {
+        return ErrorStatus::kError;
+    }
+    ////
     return ErrorStatus::kNoError;
 }
 
@@ -164,6 +240,10 @@ enum FileDescriptorOptions : int {
 
 inline ErrorStatus ConfigureFileDescriptor(int fd, FileDescriptorOptions options = kFileDescriptor_NoOptions) {
     // TODO - Сконфигурируйте дескриптор через fcntl - например, чтобы сделать чтение неблокирующим
+    ////
+    int flags = fcntl(fd, F_GETFL);
+    fcntl(fd, F_SETFL, flags | options);
+    ////
     return ErrorStatus::kNoError;
 }
 
@@ -175,7 +255,10 @@ struct NamedPipe {
 
     NamedPipe(std::filesystem::path pipe_path = kUninitializedPath) : pipe_path_(pipe_path) {}
 
-    static std::string GetPerProcessPipeName(std::string_view working_directory, std::string_view tag, pid_t process_id = getpid());
+    static std::string GetPerProcessPipeName(
+        std::string_view working_directory,
+        std::string_view tag,
+        pid_t process_id = getpid());
     static std::tuple<ErrorStatus, NamedPipe> Create(const std::filesystem::path &pipe_path);
     static std::tuple<ErrorStatus, int> GetReader(
         const std::filesystem::path &pipe_path,
@@ -208,12 +291,19 @@ inline std::tuple<ErrorStatus, int> NamedPipe::GetReader(
         const std::filesystem::path &pipe_path,
         FileDescriptorOptions options) {
     // TODO - нужно вернуть дескриптор для чтения (сконфигурированного с опциями) из именованного канала
+    ////
+    int fd = open(pipe_path.c_str(), O_RDONLY);
+    ConfigureFileDescriptor(fd, options);
+    ////
     return std::make_tuple(ErrorStatus::kNoError, fd);
 }
 
 inline std::tuple<ErrorStatus, int> NamedPipe::GetWriter(
         const std::filesystem::path &pipe_path) {
     // TODO - нужно вернуть дескриптор для записи из именованного канала
+    ////
+    int fd = open(pipe_path.c_str(), O_WRONLY, 0644);
+    ////
     return std::make_tuple(ErrorStatus::kNoError, fd);
 }
 
@@ -233,26 +323,62 @@ inline std::tuple<ErrorStatus, int> NamedPipe::GetWriter() const {
 
 inline std::tuple<ErrorStatus, NamedPipe> NamedPipe::Create(const std::filesystem::path &pipe_path) {
     // TODO - нужно создать именованный pipe
+    ////
+    NamedPipe np(pipe_path);
+    ErrorStatus error = ErrorStatus::kNoError;
+    int rc = mkfifo(pipe_path.c_str(), 0644);
+    if (rc == -1) {
+        error = ErrorStatus::kError;
+    }
+    ////
+    return std::make_tuple(error, np);
 }
 
 template <typename ObjectType>
 ErrorStatus WriteToFileDescriptor(int fd, const ObjectType &object) {
     // TODO - запись цельного объекта (полезного набора байт) произвольного типа в дескриптор
+    ////
+    ssize_t size = sizeof(object);
+    ssize_t wrote = write(fd, &object, size);
+    if (wrote != size) {
+        return ErrorStatus::kError;
+    }
+    ////
     return ErrorStatus::kNoError;
 }
 
 inline ErrorStatus WriteToFileDescriptor(int fd, const std::vector<std::byte> &bytes) {
     // TODO - запись массива байт в дескриптор
+    ////
+    ssize_t size = bytes.size();
+    ssize_t wrote = write(fd, bytes.data(), size);
+    if (wrote != size) {
+        return ErrorStatus::kError;
+    }
+    ////
     return ErrorStatus::kNoError;
 }
 
 template <typename ObjectType>
 ErrorStatus NamedPipe::Write(const ObjectType &object) const {
     // TODO - запись в инициализированный Named Pipe
+    ////
+    auto [error, fd] = GetWriter();
+    if (error == ErrorStatus::kError) {
+        close(fd);
+        return ErrorStatus::kError;
+    }
+    error = WriteToFileDescriptor(object);
+    close(fd);
+    return error;
+    ////
 }
 
 inline void NamedPipe::Remove() {
     // TODO - удаление Named Pipe
+    ////
+    unlink(pipe_path_.c_str());
+    ////
 }
 
 struct AutoClosableNamedPipe : NamedPipe {
@@ -310,30 +436,121 @@ ErrorStatus Pipe::Write(const ObjectType &object) const {
 
 template <typename StructType>
 ReadStatus ReadFromFileDescriptor(
+        // а где параметр timeout?
         int fd,
         StructType &read_object,
         bool retry_if_no_data = true,
         const std::chrono::milliseconds &retry_time_interval = std::chrono::milliseconds(100)) {
     // TODO - похоже на ReadFromNetwork, только для файлового дескриптора
     // read_object - цельный объект, который можно создать без параметров и заполнить единой операцией чтения
+    ////
+    const std::chrono::seconds &timeout = std::chrono::seconds(0);
+    std::byte b;
+    ssize_t r = 0;
+    size_t i = 0;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    std::byte* obj = (std::byte*)&read_object;
+
+    while ((r = read(fd, &b, 1)) > 0) {
+        *(obj + i) = b;
+        ++i;
+    }
+
+    if (r == EOF) {
+        return ReadStatus::kFailed;
+    }
+
+    while (i == 0 && retry_if_no_data) {
+        if (start - std::chrono::steady_clock::now() < timeout) {
+            std::this_thread::sleep_for(retry_time_interval);
+        } else {
+            break;
+        }
+
+        while ((r = read(fd, &b, 1)) > 0) {
+            *(obj + i) = b;
+            ++i;
+        }
+
+        if (r == EOF) {
+            return ReadStatus::kFailed;
+        }
+    }
+
+    if (i == 0) {
+        return ReadStatus::kNoData;
+    }
+    return ReadStatus::kSucceed;
+    ////
 }
 
 template <>
 inline ReadStatus ReadFromFileDescriptor<std::vector<std::byte>>(
+        // а где параметр timeout?
         int fd,
         std::vector<std::byte> &bytes_to_read,
         bool retry_if_no_data,
         const std::chrono::milliseconds &retry_time_interval) {
     // TODO - частный случай ReadFromFileDescriptor, когда объект не простой, а представляет из себя vector<std::byte>
+    ////
+    const std::chrono::seconds &timeout = std::chrono::seconds(0);
+    std::byte b;
+    ssize_t r = 0;
+    size_t i = 0;
+    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+
+    while ((r = read(fd, &b, 1)) > 0) {
+        bytes_to_read.push_back(b);
+        ++i;
+    }
+
+    if (r == EOF) {
+        return ReadStatus::kFailed;
+    }
+
+    while (i == 0 && retry_if_no_data) {
+        if (start - std::chrono::steady_clock::now() < timeout) {
+            std::this_thread::sleep_for(retry_time_interval);
+        } else {
+            break;
+        }
+
+        while ((r = read(fd, &b, 1)) > 0) {
+            bytes_to_read.push_back(b);
+            ++i;
+        }
+
+        if (r == EOF) {
+            return ReadStatus::kFailed;
+        }
+    }
+
+    if (i == 0) {
+        return ReadStatus::kNoData;
+    }
+
+    return ReadStatus::kSucceed;
+    ////
 }
 
 template <typename StructType>
 ReadStatus NamedPipe::Read(
+        // а где параметр timeout?
         StructType &read_object,
         FileDescriptorOptions options,
         bool retry_if_no_data,
         const std::chrono::milliseconds &retry_time_interval) const {
     // TODO - чтение из именованного канала
+    ////
+    auto [error, fd] = GetReader();
+    if (error == ErrorStatus::kError) {
+        close(fd);
+        return ReadStatus::kFailed;
+    }
+    ReadStatus read_error = ReadFromFileDescriptor(fd, read_object, retry_if_no_data, retry_time_interval);
+    close(fd);
+    return read_error;
+    ////
 }
 
 template <typename StructType>
@@ -346,14 +563,48 @@ ReadStatus Pipe::Read(
     // осуществляется меньшими "кусками", чем было записано, или если было несколько раз что-то записано, а потом за одну-несколько
     // итераций - считано
     // Эксперименты и понимание корректного чтения лишат вас огромного количества глупых ошибок
+    ////
+    ReadStatus error = ReadFromFileDescriptor(read_fd_, read_object, retry_if_no_data, retry_time_interval);
+    return error;
+    ////
 }
 
 ErrorStatus Pipe::Close() {
     // TODO - все ресурсы нужно освобождать после работы с ними. Pipe (обёртка над int fd[2]) - не исключение
+    ////
+    bool close_read = close(read_fd_) == 0;
+    if (close_read) {
+        read_fd_ = kBadFileDescriptor;
+    }
+
+    bool close_write = close(write_fd_) == 0;
+    if (close_write) {
+        write_fd_ = kBadFileDescriptor;
+    }
+    
+    bool success = close_read && close_write;
+    return success ? ErrorStatus::kNoError : ErrorStatus::kError;
+    ////
 }
 
 std::tuple<ErrorStatus, Pipe> Pipe::Create(FileDescriptorOptions read_options) {
     // TODO - создайте удобную обёртку над int fd[2] и необходимостью явно вызывать pipe во внешнем коде
+    ////
+    ErrorStatus error = ErrorStatus::kError;
+    Pipe pip;
+    int fds[2];
+    bool success = pipe(fds) == 0;
+
+    if (success) {
+        ConfigureFileDescriptor(fds[0], read_options);
+        pip.read_fd_ = fds[0];
+        pip.write_fd_ = fds[1];
+        pip.read_options_ = read_options;
+        error = ErrorStatus::kNoError;
+    }
+
+    return std::make_tuple(error, pip);
+    ////
 }
 
 struct AutoClosingPipe : Pipe {
