@@ -4,3 +4,4 @@ core*
 *.log
 test.cpp
 build
+*.exe
