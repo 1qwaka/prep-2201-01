@@ -38,13 +38,34 @@ Client::~Client() {
 
 ErrorStatus Client::ConnectTo(const EndPoint &end_point) {
     // TODO - создать сокет и подключиться к серверу, вернуть ошибку, если не получилось
+    ////
+    int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd == -1) {
+        return ErrorStatus::kError;
+    }
+
+    struct sockaddr_in addr = { 0, 0, 0, 0};
+    addr.sin_family = AF_INET;
+    int rc = inet_aton(end_point.host.data(), &addr.sin_addr);
+    if (rc == 0) {
+        close(socket_fd);
+        return ErrorStatus::kError;
+    }
+    addr.sin_port = htons(end_point.port);
+
+    rc = connect(socket_fd, (struct sockaddr*)&addr, (socklen_t)sizeof(addr));
+    if (rc == -1) {
+        close(socket_fd);
+        return ErrorStatus::kError;
+    }
+    ////
     impl_->connected = true;
     return ErrorStatus::kNoError;
 }
 
 #include <iostream>
 
- std::tuple<ErrorStatus, std::vector<std::byte>> Client::ClientImpl::SendNetworkRequest(const std::vector<std::byte> &request) {
+std::tuple<ErrorStatus, std::vector<std::byte>> Client::ClientImpl::SendNetworkRequest(const std::vector<std::byte> &request) {
     if (!connected) {
 #ifdef DEBUG
         LOG_ERROR << "No active connection\n";

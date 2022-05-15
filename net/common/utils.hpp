@@ -328,6 +328,7 @@ inline std::tuple<ErrorStatus, NamedPipe> NamedPipe::Create(const std::filesyste
     ErrorStatus error = ErrorStatus::kNoError;
     int rc = mkfifo(pipe_path.c_str(), 0644);
     if (rc == -1) {
+        // unlink(pipe_path.c_str());
         error = ErrorStatus::kError;
     }
     ////
