@@ -22,12 +22,12 @@ function check_log() {
 }
 
 print_header "RUN cppcheck"
-check_log "cppcheck net calc --enable=all --inconclusive --error-exitcode=1 -I. --suppress=missingIncludeSystem" "\(information\)"
+check_log "cppcheck net calc --enable=all --inconclusive --error-exitcode=1 -I. --suppress=missingIncludeSystem --suppress=assertWithSideEffect" "\(information\)"
 
 print_header "RUN clang-tidy"
-check_log "clang-tidy calc/* net/client/* net/common/* net/server/* -warnings-as-errors=* -- -x c++ -I." "Error (?:reading|while processing)"
+check_log "clang-tidy calc/*.cpp net/client/*.cpp net/server/*.cpp --extra-arg=-std=c++17 -warnings-as-errors=* -- -x c++ -I." "Error (?:reading|while processing)"
 
 print_header "RUN cpplint"
-check_log "cpplint --extensions=cpp calc/* net/client/* net/common/* net/server/*" "Can't open for reading"
+check_log "cpplint --linelength=110 --extensions=cpp calc/* net/client/* net/common/* net/server/*" "Can't open for reading"
 
 print_header "SUCCESS"

@@ -1,18 +1,20 @@
+// Copyright (c) 2016 Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License. See License file in the project root for license information.
 #include <net/client/client.hpp>
 
+#include <netdb.h>
+#include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <cstring>
 #include <cstddef>
 #include <memory>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <tuple>
-#include <unistd.h>
 #include <vector>
 
 struct Client::ClientImpl {
-    ClientImpl(const std::chrono::seconds &timeout) : timeout(timeout) {}
+    explicit ClientImpl(const std::chrono::seconds &timeout) : timeout(timeout) {}
 
     std::tuple<ErrorStatus, std::vector<std::byte>> SendNetworkRequest(const std::vector<std::byte> &request);
     void CloseConnectionIfNeeded();
@@ -37,9 +39,10 @@ Client::~Client() {
 }
 
 ErrorStatus Client::ConnectTo(const EndPoint &end_point) {
-    // TODO - создать сокет и подключиться к серверу, вернуть ошибку, если не получилось
+    // TODO(mu_username): создать сокет и подключиться к серверу, вернуть ошибку, если не получилось
     ////
-    int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int& socket_fd = impl_->socket_fd;
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == -1) {
         return ErrorStatus::kError;
     }
@@ -65,7 +68,8 @@ ErrorStatus Client::ConnectTo(const EndPoint &end_point) {
 
 #include <iostream>
 
-std::tuple<ErrorStatus, std::vector<std::byte>> Client::ClientImpl::SendNetworkRequest(const std::vector<std::byte> &request) {
+std::tuple<ErrorStatus, std::vector<std::byte>>
+            Client::ClientImpl::SendNetworkRequest(const std::vector<std::byte> &request) {
     if (!connected) {
 #ifdef DEBUG
         LOG_ERROR << "No active connection\n";
@@ -137,6 +141,7 @@ int main(int argc, char *argv[]) {
     const char *hostname = argc > 1 ? argv[1] : "127.0.0.1";
     unsigned int port = argc > 2 ? atoi(argv[2]) : 8080;
     Client c;
+    // cppcheck-suppress assertWithSideEffect
     assert(c.ConnectTo(EndPoint{hostname, port}) == ErrorStatus::kNoError);
     auto correct_generator = RandomCorrectMatrixTestGenerator{kTestRandomSeed};
     auto test_data = correct_generator.Generate();

@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -13,12 +14,13 @@
 #include <tuple>
 #include <vector>
 #include <unistd.h>
+#include <iostream>
 
 // #define DEBUG
 
 #ifdef DEBUG
 #include <algorithm>
-#include <iostream>
+// #include <iostream>
 #include <iterator>
 #define LOGGER std::cerr
 #define LOG_MESSAGE LOGGER << "[DEBUG] " << __FILE__ << ":" << __LINE__ << ": "
@@ -64,7 +66,7 @@ struct NetworkMessage {
 template <typename MessageType>
 std::vector<std::byte> NetworkMessage<MessageType>::Serialize(const MessageType &message) {
     std::vector<std::byte> network_data;
-    // TODO - Implement me - нужно точно рассчитать количество байт и аккуратно скопировать их в массив
+    // TODO(mu_username):- Implement me - нужно точно рассчитать количество байт и аккуратно скопировать их в массив
     ////
     std::byte* p = (std::byte*)&message.type;
     for (size_t i = 0; i < sizeof(message.type); ++i) {
@@ -80,7 +82,7 @@ std::vector<std::byte> NetworkMessage<MessageType>::Serialize(const MessageType 
 
 template <typename MessageType>
 std::tuple<ErrorStatus, MessageType> NetworkMessage<MessageType>::Deserialize(const std::vector<std::byte> &network_bytes) {
-    // TODO - Implement me
+    // TODO(mu_username):- Implement me
     ////
     MessageType message{
         MessageType::Type::kUnknown,
@@ -150,7 +152,11 @@ inline std::ostream &operator<<(std::ostream &os, const Response &response) {
 static constexpr int kBadFileDescriptor = -1;
 
 struct AutoClosingFileDescriptor {
-    AutoClosingFileDescriptor(int fd = kBadFileDescriptor) : fd_(fd) {}
+    AutoClosingFileDescriptor(int fd = kBadFileDescriptor) : fd_(fd) {
+#ifdef DEBUG
+            LOG_MESSAGE << "Opening fd " << fd_ << "\n";
+#endif
+    }
 
     ~AutoClosingFileDescriptor() {
         if (fd_ != kBadFileDescriptor) {
@@ -161,7 +167,7 @@ struct AutoClosingFileDescriptor {
         }
     }
 
-    operator int() { return fd_; }
+    operator int() const { return fd_; }
 
   private:
     int fd_;
@@ -173,60 +179,73 @@ enum class ReadStatus {
     kSucceed
 };
 
-inline ReadStatus ReadFromNetwork(int socket_fd, std::vector<std::byte> &network_bytes,
+inline ReadStatus ReadFromNetwork(int fd, std::vector<std::byte> &bytes_to_read,
                            bool retry_if_no_data = true,
                            const std::chrono::seconds &timeout = std::chrono::seconds(0),
                            const std::chrono::milliseconds &retry_time_interval = std::chrono::milliseconds(100)) {
 
-    // TODO - нужно считать данные из сокета в network_bytes
+    // TODO(mu_username): нужно считать данные из сокета в network_bytes
     // если данных нет - вернуть ReadStatus::kNoData (если не стоит retry_if_no_data и не вышел таймаут)
     // если произошла ошибка - вернуть ReadStatus::kFailed
     ////
-    std::byte b;
-    ssize_t r = 0;
-    size_t i = 0;
     std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
 
-    while ((r = read(socket_fd, &b, 1)) > 0) {
-        network_bytes.push_back(b);
-        ++i;
-    }
-
-    if (r == EOF) {
-        return ReadStatus::kFailed;
-    }
-
-    while (i == 0 && retry_if_no_data) {
-        if (start - std::chrono::steady_clock::now() < timeout) {
-            std::this_thread::sleep_for(retry_time_interval);
-        } else {
-            break;
-        }
-
-        while ((r = read(socket_fd, &b, 1)) > 0) {
-            network_bytes.push_back(b);
-            ++i;
-        }
-
-        if (r == EOF) {
+    std::byte tmp_byte;
+    while (true) {
+        // cout << "start read" << endl;
+        ssize_t r = read(fd, &tmp_byte, 1);
+        if (r == -1 && errno == EWOULDBLOCK) {
+            if (bytes_to_read.size() == 0) {
+                // cout << "error: " << errno << endl;
+                // cout << "EWUOLDBLOCK: " << EWOULDBLOCK << endl;
+                // perror("lol");
+                 if (retry_if_no_data && start - std::chrono::steady_clock::now() < timeout) {
+                    std::cout << "time: " << (int)(start - std::chrono::steady_clock::now() < timeout) << std::endl;
+                    std::this_thread::sleep_for(retry_time_interval);
+                    continue;
+                } else {
+                    return ReadStatus::kNoData;
+                }
+                std::this_thread::sleep_for(retry_time_interval);
+                continue;
+            } else {
+                return ReadStatus::kSucceed;
+            }
+        } else if (r == -1) {
+            // perror("====ERROR====");
             return ReadStatus::kFailed;
         }
-    }
+        // cout << "read " << r << " bytes: " << (int)tmp_byte << endl;
 
-    if (i == 0) {
-        return ReadStatus::kNoData;
+        if (r == 0 && retry_if_no_data) {
+            // using std::chrono_literals::operator""ms;
+            std::this_thread::sleep_for(retry_time_interval);
+            continue;
+        } else if (r == 0) {
+            if (bytes_to_read.size() == 0) {
+                return ReadStatus::kNoData;
+            } else {
+                return ReadStatus::kSucceed;
+            }
+        }
+
+        bytes_to_read.push_back(tmp_byte);
+        // cout << "end read" << endl;
     }
-    ////
-    return ReadStatus::kSucceed;
+    
 }
 
 inline ErrorStatus SendToNetwork(int socket_fd, const std::vector<std::byte> &message_data) {
-    // TODO - нужно отправить массив байт через сокет
+    // TODO(mu_username):- нужно отправить массив байт через сокет
     // если произошла ошибка - вернуть
     ////
     ssize_t msg_size = message_data.size();
     ssize_t wrote = write(socket_fd, message_data.data(), msg_size);
     if (wrote != msg_size) {
+#ifdef DEBUG
+        LOG_ERROR << "Failed to wrote " << msg_size << " bytes (only " << wrote <<" wrote) fd:" << socket_fd << "\n";
+        perror("write error: ");
+#endif
         return ErrorStatus::kError;
     }
     ////
@@ -239,7 +258,7 @@ enum FileDescriptorOptions : int {
 };
 
 inline ErrorStatus ConfigureFileDescriptor(int fd, FileDescriptorOptions options = kFileDescriptor_NoOptions) {
-    // TODO - Сконфигурируйте дескриптор через fcntl - например, чтобы сделать чтение неблокирующим
+    // TODO(mu_username):- Сконфигурируйте дескриптор через fcntl - например, чтобы сделать чтение неблокирующим
     ////
     int flags = fcntl(fd, F_GETFL);
     fcntl(fd, F_SETFL, flags | options);
@@ -290,7 +309,7 @@ struct NamedPipe {
 inline std::tuple<ErrorStatus, int> NamedPipe::GetReader(
         const std::filesystem::path &pipe_path,
         FileDescriptorOptions options) {
-    // TODO - нужно вернуть дескриптор для чтения (сконфигурированного с опциями) из именованного канала
+    // TODO(mu_username):- нужно вернуть дескриптор для чтения (сконфигурированного с опциями) из именованного канала
     ////
     int fd = open(pipe_path.c_str(), O_RDONLY);
     ConfigureFileDescriptor(fd, options);
@@ -300,7 +319,7 @@ inline std::tuple<ErrorStatus, int> NamedPipe::GetReader(
 
 inline std::tuple<ErrorStatus, int> NamedPipe::GetWriter(
         const std::filesystem::path &pipe_path) {
-    // TODO - нужно вернуть дескриптор для записи из именованного канала
+    // TODO(mu_username):- нужно вернуть дескриптор для записи из именованного канала
     ////
     int fd = open(pipe_path.c_str(), O_WRONLY, 0644);
     ////
@@ -322,7 +341,7 @@ inline std::tuple<ErrorStatus, int> NamedPipe::GetWriter() const {
 }
 
 inline std::tuple<ErrorStatus, NamedPipe> NamedPipe::Create(const std::filesystem::path &pipe_path) {
-    // TODO - нужно создать именованный pipe
+    // TODO(mu_username):- нужно создать именованный pipe
     ////
     NamedPipe np(pipe_path);
     ErrorStatus error = ErrorStatus::kNoError;
@@ -337,7 +356,7 @@ inline std::tuple<ErrorStatus, NamedPipe> NamedPipe::Create(const std::filesyste
 
 template <typename ObjectType>
 ErrorStatus WriteToFileDescriptor(int fd, const ObjectType &object) {
-    // TODO - запись цельного объекта (полезного набора байт) произвольного типа в дескриптор
+    // TODO(mu_username):- запись цельного объекта (полезного набора байт) произвольного типа в дескриптор
     ////
     ssize_t size = sizeof(object);
     ssize_t wrote = write(fd, &object, size);
@@ -349,7 +368,7 @@ ErrorStatus WriteToFileDescriptor(int fd, const ObjectType &object) {
 }
 
 inline ErrorStatus WriteToFileDescriptor(int fd, const std::vector<std::byte> &bytes) {
-    // TODO - запись массива байт в дескриптор
+    // TODO(mu_username):- запись массива байт в дескриптор
     ////
     ssize_t size = bytes.size();
     ssize_t wrote = write(fd, bytes.data(), size);
@@ -362,34 +381,35 @@ inline ErrorStatus WriteToFileDescriptor(int fd, const std::vector<std::byte> &b
 
 template <typename ObjectType>
 ErrorStatus NamedPipe::Write(const ObjectType &object) const {
-    // TODO - запись в инициализированный Named Pipe
+    // TODO(mu_username):- запись в инициализированный Named Pipe
     ////
     auto [error, fd] = GetWriter();
     if (error == ErrorStatus::kError) {
         close(fd);
         return ErrorStatus::kError;
     }
-    error = WriteToFileDescriptor(object);
+    error = WriteToFileDescriptor(fd, object);
     close(fd);
     return error;
     ////
 }
 
 inline void NamedPipe::Remove() {
-    // TODO - удаление Named Pipe
+    // TODO(mu_username):- удаление Named Pipe
     ////
     unlink(pipe_path_.c_str());
     ////
 }
 
 struct AutoClosableNamedPipe : NamedPipe {
-    AutoClosableNamedPipe(const NamedPipe &pipe_obj) : NamedPipe(pipe_obj), pipe_obj_(pipe_obj) {}
+    explicit AutoClosableNamedPipe(const NamedPipe &pipe_obj) : NamedPipe(pipe_obj), pipe_obj_(pipe_obj) {}
     ~AutoClosableNamedPipe() {
         pipe_obj_.Remove();
     }
 
     static std::tuple<ErrorStatus, AutoClosableNamedPipe> Create(const std::filesystem::path &pipe_path) {
-        return NamedPipe::Create(pipe_path);
+        auto [error, named_pipe] = NamedPipe::Create(pipe_path);
+        return std::make_tuple(error, AutoClosableNamedPipe(named_pipe));
     }
 
   private:
@@ -437,100 +457,111 @@ ErrorStatus Pipe::Write(const ObjectType &object) const {
 
 template <typename StructType>
 ReadStatus ReadFromFileDescriptor(
-        // а где параметр timeout?
         int fd,
         StructType &read_object,
         bool retry_if_no_data = true,
         const std::chrono::milliseconds &retry_time_interval = std::chrono::milliseconds(100)) {
-    // TODO - похоже на ReadFromNetwork, только для файлового дескриптора
+    // TODO(mu_username): похоже на ReadFromNetwork, только для файлового дескриптора
     // read_object - цельный объект, который можно создать без параметров и заполнить единой операцией чтения
     ////
-    const std::chrono::seconds &timeout = std::chrono::seconds(0);
-    std::byte b;
-    ssize_t r = 0;
-    size_t i = 0;
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    std::byte* obj = (std::byte*)&read_object;
-
-    while ((r = read(fd, &b, 1)) > 0) {
-        *(obj + i) = b;
-        ++i;
-    }
-
-    if (r == EOF) {
-        return ReadStatus::kFailed;
-    }
-
-    while (i == 0 && retry_if_no_data) {
-        if (start - std::chrono::steady_clock::now() < timeout) {
-            std::this_thread::sleep_for(retry_time_interval);
-        } else {
-            break;
-        }
-
-        while ((r = read(fd, &b, 1)) > 0) {
-            *(obj + i) = b;
-            ++i;
-        }
-
-        if (r == EOF) {
+    // bytes_to_read.clear();
+    std::byte tmp_byte;
+    std::byte* start = (std::byte*)&read_object;
+    int byte_pos = 0;
+    while (true) {
+        // cout << "start read" << endl;
+        ssize_t r = read(fd, &tmp_byte, 1);
+        if (r == -1 && errno == EWOULDBLOCK) {
+            if (byte_pos < (int)sizeof(StructType)) {
+                // cout << "error: " << errno << endl;
+                // cout << "EWUOLDBLOCK: " << EWOULDBLOCK << endl;
+                // perror("lol");
+                if (retry_if_no_data) {
+                    std::this_thread::sleep_for(retry_time_interval);
+                    continue;
+                } else {
+                    return ReadStatus::kNoData;
+                }
+            } else {
+                return ReadStatus::kSucceed;
+            }
+        } else if (r == -1) {
+            // perror("====ERROR====");
             return ReadStatus::kFailed;
         }
-    }
+        // cout << "read " << r << " bytes: " << (int)tmp_byte << endl;
 
-    if (i == 0) {
-        return ReadStatus::kNoData;
+        if (r == 0 && retry_if_no_data) {
+            // using std::chrono_literals::operator""ms;
+            std::this_thread::sleep_for(retry_time_interval);
+            continue;
+        } else if (r == 0) {
+            if (byte_pos == 0) {
+                return ReadStatus::kNoData;
+            } else {
+                return ReadStatus::kSucceed;
+            }
+        }
+
+        if (byte_pos >= (int)sizeof(StructType)) {
+#ifdef DEBUG
+            LOG_ERROR << "There is extra data in file descriptor after read" << "\n";
+#endif
+            return ReadStatus::kSucceed;
+        }
+        
+        *(start + byte_pos) = tmp_byte;
+        byte_pos++;
+        // cout << "end read" << endl;
     }
-    return ReadStatus::kSucceed;
     ////
 }
 
 template <>
 inline ReadStatus ReadFromFileDescriptor<std::vector<std::byte>>(
-        // а где параметр timeout?
         int fd,
         std::vector<std::byte> &bytes_to_read,
         bool retry_if_no_data,
         const std::chrono::milliseconds &retry_time_interval) {
-    // TODO - частный случай ReadFromFileDescriptor, когда объект не простой, а представляет из себя vector<std::byte>
+    // TODO(mu_username):- частный случай ReadFromFileDescriptor, когда объект не простой, а представляет из себя vector<std::byte>
     ////
-    const std::chrono::seconds &timeout = std::chrono::seconds(0);
-    std::byte b;
-    ssize_t r = 0;
-    size_t i = 0;
-    std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-
-    while ((r = read(fd, &b, 1)) > 0) {
-        bytes_to_read.push_back(b);
-        ++i;
-    }
-
-    if (r == EOF) {
-        return ReadStatus::kFailed;
-    }
-
-    while (i == 0 && retry_if_no_data) {
-        if (start - std::chrono::steady_clock::now() < timeout) {
-            std::this_thread::sleep_for(retry_time_interval);
-        } else {
-            break;
-        }
-
-        while ((r = read(fd, &b, 1)) > 0) {
-            bytes_to_read.push_back(b);
-            ++i;
-        }
-
-        if (r == EOF) {
+    // bytes_to_read.clear();
+    std::byte tmp_byte;
+    while (true) {
+        // cout << "start read" << endl;
+        ssize_t r = read(fd, &tmp_byte, 1);
+        if (r == -1 && errno == EWOULDBLOCK) {
+            if (bytes_to_read.size() == 0 && retry_if_no_data) {
+                // cout << "error: " << errno << endl;
+                // cout << "EWUOLDBLOCK: " << EWOULDBLOCK << endl;
+                // perror("lol");
+                std::this_thread::sleep_for(retry_time_interval);
+                continue;
+            } else {
+                return ReadStatus::kSucceed;
+            }
+        } else if (r == -1) {
+            // perror("====ERROR====");
             return ReadStatus::kFailed;
         }
-    }
+        // cout << "read " << r << " bytes: " << (int)tmp_byte << endl;
 
-    if (i == 0) {
-        return ReadStatus::kNoData;
-    }
+        if (r == 0 && retry_if_no_data) {
+            // using std::chrono_literals::operator""ms;
+            std::this_thread::sleep_for(retry_time_interval);
+            continue;
+        } else if (r == 0) {
+            if (bytes_to_read.size() == 0) {
+                return ReadStatus::kNoData;
+            } else {
+                return ReadStatus::kSucceed;
+            }
+        }
 
-    return ReadStatus::kSucceed;
+        bytes_to_read.push_back(tmp_byte);
+        // cout << "end read" << endl;
+    }
+    
     ////
 }
 
@@ -541,9 +572,9 @@ ReadStatus NamedPipe::Read(
         FileDescriptorOptions options,
         bool retry_if_no_data,
         const std::chrono::milliseconds &retry_time_interval) const {
-    // TODO - чтение из именованного канала
+    // TODO(mu_username):- чтение из именованного канала
     ////
-    auto [error, fd] = GetReader();
+    auto [error, fd] = GetReader(options);
     if (error == ErrorStatus::kError) {
         close(fd);
         return ReadStatus::kFailed;
@@ -559,7 +590,7 @@ ReadStatus Pipe::Read(
         StructType &read_object,
         bool retry_if_no_data,
         const std::chrono::milliseconds &retry_time_interval) const {
-    // TODO - чтение из неименованного канала (внимательно убедитесь на тестовых примерах, в чём разница неблокирующего чтения
+    // TODO(mu_username):- чтение из неименованного канала (внимательно убедитесь на тестовых примерах, в чём разница неблокирующего чтения
     // из именованного и неименованного канала в зависимости от того, начато ли оно раньше, чем была запись, или если чтение
     // осуществляется меньшими "кусками", чем было записано, или если было несколько раз что-то записано, а потом за одну-несколько
     // итераций - считано
@@ -571,7 +602,7 @@ ReadStatus Pipe::Read(
 }
 
 ErrorStatus Pipe::Close() {
-    // TODO - все ресурсы нужно освобождать после работы с ними. Pipe (обёртка над int fd[2]) - не исключение
+    // TODO(mu_username):- все ресурсы нужно освобождать после работы с ними. Pipe (обёртка над int fd[2]) - не исключение
     ////
     bool close_read = close(read_fd_) == 0;
     if (close_read) {
@@ -582,14 +613,14 @@ ErrorStatus Pipe::Close() {
     if (close_write) {
         write_fd_ = kBadFileDescriptor;
     }
-    
+
     bool success = close_read && close_write;
     return success ? ErrorStatus::kNoError : ErrorStatus::kError;
     ////
 }
 
 std::tuple<ErrorStatus, Pipe> Pipe::Create(FileDescriptorOptions read_options) {
-    // TODO - создайте удобную обёртку над int fd[2] и необходимостью явно вызывать pipe во внешнем коде
+    // TODO(mu_username):- создайте удобную обёртку над int fd[2] и необходимостью явно вызывать pipe во внешнем коде
     ////
     ErrorStatus error = ErrorStatus::kError;
     Pipe pip;
@@ -609,7 +640,7 @@ std::tuple<ErrorStatus, Pipe> Pipe::Create(FileDescriptorOptions read_options) {
 }
 
 struct AutoClosingPipe : Pipe {
-    AutoClosingPipe(const Pipe &pipe_obj) : Pipe(pipe_obj), pipe_obj_(pipe_obj) {}
+    explicit AutoClosingPipe(const Pipe &pipe_obj) : Pipe(pipe_obj), pipe_obj_(pipe_obj) {}
     ~AutoClosingPipe() {
         pipe_obj_.Close();
     }

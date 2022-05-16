@@ -40,7 +40,6 @@ union TaggedId {
             for_task = id;
         }
     }
-
 #ifdef DEBUG
     friend std::ostream &operator<<(std::ostream &os, const TaggedId &id) {
         if (id.tag == TaggedId::Tag::kTask) {
